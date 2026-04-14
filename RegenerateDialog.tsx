@@ -20,13 +20,13 @@ export const RegenerateDialog: React.FC<RegenerateDialogProps> = ({ initialBeat,
         <div className="fixed inset-0 z-[500] bg-black/80 flex items-center justify-center p-4 animate-in fade-in">
             <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
                 <div className="flex justify-between items-center border-b pb-4">
-                    <h3 className="font-title text-xl text-gray-900">페이지 재생성 (Regenerate)</h3>
+                    <h3 className="font-title text-xl text-gray-900">역사 장면 재생성</h3>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl" aria-label="닫기">&times;</button>
                 </div>
-                <p className="text-sm text-gray-500">장면 설명이나 대사를 수정하여 다시 그려보세요.</p>
+                <p className="text-sm text-gray-500">역사 장면이나 대사를 수정하여 다시 그려보세요.</p>
                 
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">장면 묘사 (Scene Description)</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">역사 장면 묘사</label>
                     <textarea 
                         className="studio-input h-24 resize-none"
                         value={beat.scene}

@@ -101,7 +101,7 @@ export const EditModal: React.FC<EditModalProps> = ({ imageUrl, onClose, onApply
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🖍️</span>
                         <div>
-                            <h3 className="font-title text-xl text-gray-900">수정 지시 (Retake)</h3>
+                            <h3 className="font-title text-xl text-gray-900">장면 수정</h3>
                             <p className="text-xs text-gray-500 font-body">수정할 부분을 붉은색으로 표시하고 내용을 입력하세요.</p>
                         </div>
                     </div>
@@ -130,7 +130,7 @@ export const EditModal: React.FC<EditModalProps> = ({ imageUrl, onClose, onApply
                             type="text" 
                             value={instruction}
                             onChange={(e) => setInstruction(e.target.value)}
-                            placeholder="예: 캐릭터의 표정을 웃는 얼굴로 바꿔줘, 배경에 나무를 추가해줘"
+                            placeholder="예: 인물의 의상을 관복으로 바꿔줘, 배경에 경복궁을 추가해줘"
                             className="studio-input"
                             autoFocus
                         />

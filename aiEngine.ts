@@ -7,7 +7,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import toast from 'react-hot-toast';
-import { GENRES, TONES, LANGUAGES, STYLE_PRESETS, DECISION_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, ComicFace, Beat, PremiseAnalysis } from './types';
+import { GENRES, TONES, LANGUAGES, STYLE_PRESETS, HISTORICAL_FIGURE_PRESETS, DECISION_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, ComicFace, Beat, PremiseAnalysis } from './types';
 import { useStore } from './store';
 
 // --- Constants ---
@@ -175,24 +175,23 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries = 4, ba
 export async function analyzeCharacterImage(base64: string, role: string): Promise<string> {
   try {
     const ai = getAI();
-    const prompt = `You are a character designer. Analyze this character image and create a DETAILED visual reference description that can be used to recreate this EXACT character consistently across many different scenes and poses.
+    const prompt = `You are a Korean historical costume and portrait expert. Analyze this character image and create a DETAILED visual reference description for recreating this EXACT historical figure consistently across many different scenes.
 
 Describe in 60-80 words covering ALL of these:
-- HAIR: exact style (length, cut, bangs, texture), exact color (e.g. "platinum blonde with purple tips")
-- EYES: shape, color, distinctive features (e.g. "sharp amber eyes with long lashes")
-- FACE: skin tone, facial structure, age appearance
-- BUILD: body type, height impression
-- OUTFIT: specific clothing items with exact colors (e.g. "dark navy blazer over white shirt, red ribbon tie")
-- SIGNATURE FEATURES: anything unique that makes this character instantly recognizable (accessories, scars, piercings, markings, glasses style, etc.)
+- HEADWEAR/HAIR: traditional headgear (관모, 갓, 투구, 족두리 etc.), hairstyle (상투, 땋은머리 etc.), exact color
+- FACE: facial structure, age appearance, skin tone, facial hair (수염) style if any, expression
+- ATTIRE: specific traditional Korean clothing (한복, 관복, 갑옷, 두루마기 etc.) with exact colors and patterns, layers, sash/belt details
+- BUILD: body type, stature, posture
+- SIGNATURE FEATURES: distinctive accessories (부채, 검, 붓, 서책 etc.), rank insignia (흉배), unique identifiers
 
-This description will be used as a CHARACTER CONSISTENCY REFERENCE — be precise enough that another AI can reproduce this exact character.
+This description will be used as a CHARACTER CONSISTENCY REFERENCE for a Korean historical biography comic — be precise enough that another AI can reproduce this exact figure.
 Output ONLY the visual description, no commentary.`;
     const res = await retryOperation(() => ai.models.generateContent({
       model: useStore.getState().selectedTextModel,
       contents: { parts: [{ text: prompt }, { inlineData: { mimeType: detectMime(base64), data: toRawBase64(base64) } }] }
     }));
-    return res.text?.trim() || `A distinctive ${role} character with memorable features.`;
-  } catch (_e) { return `A ${role} character with unique, recognizable appearance.`; }
+    return res.text?.trim() || `A distinctive Korean historical ${role} figure in traditional attire.`;
+  } catch (_e) { return `A Korean historical ${role} figure with traditional attire and dignified bearing.`; }
 }
 
 // ======== Smart Premise Analyzer ========
@@ -207,34 +206,42 @@ export async function analyzePremise() {
   if (!key) { state.setShowApiKeyDialog(true); return; }
 
   state.setIsAnalyzingPremise(true);
-  toast.loading('AI가 프리미스를 분석 중입니다...', { id: 'analyze-premise' });
+  toast.loading('역사 자료를 분석 중입니다...', { id: 'analyze-premise' });
 
   try {
     const ai = getAI();
-    const langName = LANGUAGES.find(l => l.code === state.selectedLanguage)?.name || "Korean";
 
-    const prompt = `You are a manga story architect. Analyze this premise and output ONLY valid JSON:
+    const prompt = `You are a Korean historical biography architect (한국 역사 전기 구성가). Analyze this premise about a Korean historical figure and output ONLY valid JSON.
 
 PREMISE: "${state.customPremise}"
-TARGET LANGUAGE: ${langName}
 
-Choose ONE genre from: ${GENRES.slice(0, 20).join(' | ')}...
-Choose ONE tone from: ${TONES.slice(0, 20).join(' | ')}...
+Choose ONE historical period/category from: ${GENRES.join(' | ')}
+Choose ONE narration tone from: ${TONES.join(' | ')}
 
 JSON format:
 {
-  "suggestedGenre": "exact genre name from above",
-  "suggestedTone": "exact tone name from above",
-  "suggestedTitle": "short title in ${langName} (max 4 words)",
-  "coverStyle": "visual direction for cover art (15 words, English)",
+  "suggestedGenre": "exact period/category name from above list",
+  "suggestedTone": "exact tone name from above list",
+  "suggestedTitle": "short biography title in Korean (max 5 words, e.g. '세종, 빛을 만들다')",
+  "coverStyle": "visual direction for biography cover art (15 words, English, historically appropriate)",
+  "historicalPeriod": "specific era description (e.g. '조선 전기 1397-1450')",
+  "educationalNote": "brief educational significance in Korean (1-2 sentences)",
   "characterProfiles": [
-    {"role": "hero", "name": "character name in target language", "appearance": "DETAILED visual description (40-60 words, English): face shape, eye color/shape, hairstyle with color, skin tone, body build, signature outfit with colors, accessories, distinguishing features (scars, tattoos, glasses, etc). Must be specific enough to recreate consistently across multiple images."},
-    {"role": "friend", "name": "...", "appearance": "... (same detail level as hero)"}
+    {"role": "hero", "name": "historical figure name in Korean", "appearance": "DETAILED visual description (40-60 words, English): traditional Korean attire for their era and rank (한복/관복/갑옷 etc.), headwear, facial features, age, build, signature accessories. Must be historically accurate and specific enough to recreate consistently.", "historicalTitle": "official title/rank", "period": "birth-death years"},
+    {"role": "friend", "name": "associated historical figure", "appearance": "... (same detail level, period-appropriate attire)", "historicalTitle": "...", "period": "..."}
   ],
   "storyArc": [
-    {"pageNum": 1, "scene": "visual scene description", "purpose": "narrative purpose in ${langName}"}
+    {"pageNum": 1, "scene": "visual scene description", "purpose": "narrative purpose in Korean", "historicalEvent": "actual historical event depicted"}
   ]
-}`;
+}
+
+IMPORTANT: The storyArc should follow a biographical narrative structure:
+- Pages 1-2: Birth, childhood, formative experiences (출생/성장)
+- Pages 3-5: Key achievements and contributions (핵심 업적)
+- Pages 6-8: Trials, conflicts, pivotal decisions (시련/갈등)
+- Pages 9-10: Legacy and historical significance (역사적 의의)
+
+All character appearances MUST be historically accurate — correct period clothing, hairstyles, and accessories for their era and social status.`;
 
     const res = await retryOperation(() => ai.models.generateContent({
       model: state.selectedTextModel, contents: prompt, config: { responseMimeType: 'application/json' }
@@ -245,9 +252,9 @@ JSON format:
     if (!TONES.includes(parsed.suggestedTone)) parsed.suggestedTone = TONES[0];
 
     state.setPremiseAnalysis(parsed);
-    toast.success('프리미스 분석 완료!', { id: 'analyze-premise' });
+    toast.success('역사 분석 완료!', { id: 'analyze-premise' });
   } catch (e) {
-    handleAPIError(e, '프리미스 분석');
+    handleAPIError(e, '역사 분석');
     toast.dismiss('analyze-premise');
   } finally {
     state.setIsAnalyzingPremise(false);
@@ -277,29 +284,31 @@ export async function generateCharacterFromProfile(profile: { role: string; name
     const matchedPreset = STYLE_PRESETS.find(p => p.name === state.selectedStylePreset);
     const styleGuidance = matchedPreset ? matchedPreset.prompt : "clean manga style";
 
-    // Genre/story context for character personality expression
+    // Historical context for character generation
     const genreContext = state.selectedGenre || '';
     const toneContext = state.storyTone || '';
     const premiseContext = state.customPremise?.trim()?.slice(0, 100) || '';
 
-    const prompt = `Generate a CHARACTER REFERENCE SHEET for manga/comic production.
+    const prompt = `Generate a HISTORICAL FIGURE CHARACTER PORTRAIT for a Korean biography comic.
 
-CHARACTER: ${profile.name} (${profile.role === 'hero' ? 'PROTAGONIST' : profile.role === 'friend' ? 'SUPPORTING CHARACTER' : 'SECONDARY CHARACTER'})
+CHARACTER: ${profile.name} (${profile.role === 'hero' ? '주인공 위인' : profile.role === 'friend' ? '관련 인물' : '부차적 인물'})
 VISUAL DESCRIPTION: ${profile.appearance}
-STORY CONTEXT: ${genreContext} / ${toneContext}${premiseContext ? ` — "${premiseContext}"` : ''}
+HISTORICAL CONTEXT: ${genreContext} / ${toneContext}${premiseContext ? ` — "${premiseContext}"` : ''}
 
 REQUIREMENTS:
 - Three-quarter view (3/4 angle) bust shot showing face and upper body clearly
 - Simple solid-color or gradient background (NO complex backgrounds)
 - ${styleGuidance} art style
-- Character must have DISTINCTIVE, MEMORABLE features: unique hairstyle, expressive eyes, recognizable outfit
-- Show personality through posture and expression (${profile.role === 'hero' ? 'confident, determined' : profile.role === 'friend' ? 'warm, supportive' : 'mysterious, intriguing'})
-- Clean detailed line work with vibrant anime-style coloring
-- The character design must be ICONIC and easily recognizable in different scenes and poses
+- Character must wear HISTORICALLY ACCURATE Korean traditional attire for their era and rank
+- Traditional Korean headwear appropriate to their status (관모, 갓, 투구, 비녀 etc.)
+- Period-appropriate hairstyle (상투 for male officials, traditional styles for women)
+- Show dignity and character through posture and expression (${profile.role === 'hero' ? 'dignified, determined leader' : profile.role === 'friend' ? 'loyal, capable ally' : 'distinctive supporting figure'})
+- Detailed rendering of traditional clothing patterns, fabrics, and accessories
+- The character design must be RECOGNIZABLE and consistent across different historical scenes
 
-QUALITY: Professional anime character design sheet quality. Think of character designs from top anime studios (Ufotable, MAPPA, Kyoto Animation).
+QUALITY: Professional historical illustration quality. Think of Korean historical drama (사극) character design or educational biography illustration.
 
-NEGATIVE: No text, letters, numbers, watermarks, signatures, logos, or multiple characters. Single character illustration ONLY.`;
+NEGATIVE: No text, letters, numbers, watermarks, signatures, logos, or multiple characters. No modern clothing or accessories. No anachronistic elements. Single character illustration ONLY.`;
 
     const res = await retryOperation(() => ai.models.generateContent({
       model: state.selectedImageModel,
@@ -330,12 +339,11 @@ async function generateTitle(): Promise<string> {
   const state = useStore.getState();
   if (state.coverTitle.trim()) return state.coverTitle;
 
-  const langName = LANGUAGES.find(l => l.code === state.selectedLanguage)?.name || "Korean";
   const storyContext = state.customPremise?.trim()
-    ? `STORY PREMISE: ${state.customPremise}`
-    : `GENRE: ${state.selectedGenre}`;
-  const heroContext = state.hero ? ` HERO: ${state.hero.desc}.` : '';
-  const prompt = `Create a creative, short comic book title (Max 5 words). CONTEXT: ${storyContext}.${heroContext} TARGET LANGUAGE: ${langName}. Output ONLY the title text, no quotes.`;
+    ? `전기 소재: ${state.customPremise}`
+    : `시대: ${state.selectedGenre}`;
+  const heroContext = state.hero ? ` 위인: ${state.hero.desc}.` : '';
+  const prompt = `Create a creative, short Korean biography comic title (Max 5 words in Korean). Format: "인물명, 업적/상징" (e.g. "세종, 빛을 만들다", "이순신, 바다의 벽이 되다"). CONTEXT: ${storyContext}.${heroContext} Output ONLY the title text in Korean, no quotes.`;
 
   try {
     const ai = getAI();
@@ -410,31 +418,41 @@ export async function generateBeat(pageNum: number, isDecisionPage: boolean): Pr
     ? `\nPREVIOUS DIALOGUES (DO NOT repeat or paraphrase these lines):\n${previousDialogues.join('\n')}\n\nEach page MUST have COMPLETELY NEW dialogue that advances the story. Characters should say something they haven't said before — new information, new emotions, new reactions.`
     : '';
 
-  const prompt = `You are a manga storyteller. Generate PAGE ${pageNum} in ${langName}.
+  // Determine biographical phase based on page position
+  const bioPhase = pageNum <= 2 ? '출생/성장기 — childhood, education, formative experiences'
+    : pageNum <= 5 ? '핵심 업적기 — key achievements, contributions, breakthroughs'
+    : pageNum <= 8 ? '시련/갈등기 — trials, conflicts, pivotal challenges'
+    : '역사적 의의 — legacy, impact, lasting significance';
 
-STORY CORE: ${premiseContext}
+  const prompt = `You are a Korean historical biography storyteller (한국 역사 전기 서술가). Generate PAGE ${pageNum} in Korean.
+
+BIOGRAPHY SUBJECT: ${premiseContext}
+HISTORICAL PERIOD: ${state.selectedGenre}
+BIOGRAPHICAL PHASE: ${bioPhase}
 PREVIOUS STORY FLOW:
 ${historyContext}
 CHARACTERS: ${charRefs}
-TONE: ${state.storyTone}
-PAGE TYPE: ${isDecisionPage ? 'CHOICE POINT - create suspense with 2 options' : 'NARRATIVE PROGRESSION'}
+NARRATION TONE: ${state.storyTone}
+PAGE TYPE: ${isDecisionPage ? '역사적 분기점 (HISTORICAL TURNING POINT) — a real pivotal decision the historical figure faced, with 2 historically plausible paths' : 'NARRATIVE PROGRESSION'}
 ${avoidRepeatBlock}
 ${avoidDialogueBlock}
 
 OUTPUT JSON ONLY:
 {
-  "scene": "visual scene description in English (30-50 words) - describe SPECIFIC action, character INTERACTION (who looks at whom, body language, gestures), background environment, lighting direction, and camera angle. Characters must NOT face the camera — they should look at each other, at objects, or away. Each page MUST show a different moment. NO text mentions.",
-  "caption": "narration text in ${langName} (optional, leave empty if not needed) — must be NEW narration, not repeated from previous pages",
-  "dialogue": "character dialogue in ${langName} — must be a FRESH line that moves the story forward. Never repeat or rephrase previous dialogue.",
+  "scene": "visual scene description in English (30-50 words) - describe SPECIFIC historical scene with accurate period setting (Korean traditional architecture, landscapes, clothing). Show character INTERACTION in historically appropriate context (court audience, battle, scholarly discussion, ceremony). Characters must NOT face the camera. Include period-accurate environment details. NO modern elements, NO anachronisms.",
+  "caption": "narration text in Korean (optional, leave empty if not needed) — educational narration providing historical context. Must be NEW narration, not repeated from previous pages.",
+  "dialogue": "character dialogue in Korean — period-appropriate speech reflecting the character's social status and era. Must be a FRESH line that advances the biographical narrative. Never repeat or rephrase previous dialogue.",
   "focus_char": "hero | friend | friend2 | other",
-  "choices": ${isDecisionPage ? '["option 1", "option 2"]' : '[]'}
+  "choices": ${isDecisionPage ? '["historically plausible option 1 in Korean", "historically plausible option 2 in Korean"]' : '[]'}
 }
 
 CRITICAL RULES:
-1. The scene must be SPECIFIC and UNIQUE — no generic descriptions.
-2. Dialogue must ADVANCE the plot — each line reveals new information, emotion, or conflict.
-3. NEVER repeat dialogue from previous pages, even paraphrased.
-4. If a page has no meaningful dialogue, leave the dialogue field EMPTY rather than forcing repetitive lines.`;
+1. HISTORICAL ACCURACY: All scenes, dialogue, and settings must be appropriate to the Korean historical period. No anachronisms.
+2. The scene must be SPECIFIC and UNIQUE — show an actual historical moment or plausible biographical event.
+3. Dialogue must reflect the character's era, social status, and personality — use appropriate speech levels (존댓말/반말).
+4. NEVER repeat dialogue from previous pages, even paraphrased.
+5. ${isDecisionPage ? 'The choices must represent REAL historical dilemmas the figure faced — not fictional branching.' : 'Each page should reveal a new aspect of the historical figure and their character.'}
+6. If a page has no meaningful dialogue, leave the dialogue field EMPTY rather than forcing repetitive lines.`;
 
   try {
     const ai = getAI();
@@ -445,86 +463,81 @@ CRITICAL RULES:
 
     // Ensure choices exist for decision pages
     if (isDecisionPage && (!parsed.choices || parsed.choices.length === 0)) {
-      parsed.choices = ["계속 진행하기", "다른 경로 선택"];
+      parsed.choices = ["역경에 맞서다", "다른 길을 모색하다"];
     }
 
     return parsed as Beat;
   } catch (e) {
-    handleAPIError(e, '스토리 생성');
-    return { scene: "A dramatic scene unfolds.", focus_char: 'hero', choices: isDecisionPage ? ["계속하기", "피하기"] : [] };
+    handleAPIError(e, '역사 서술 생성');
+    return { scene: "A pivotal moment in Korean history unfolds in a traditional setting.", focus_char: 'hero', choices: isDecisionPage ? ["역경에 맞서다", "다른 길을 모색하다"] : [] };
   }
 }
 
-// ======== Anime-Style Composition System ========
+// ======== Historical Composition System ========
 
 const CAMERA_ANGLES = [
-  "wide establishing shot from above, showing environment and characters in context",
-  "close-up two-shot: characters facing each other in profile, tension between them",
-  "medium shot at eye level, characters positioned at different depths in the frame",
-  "low angle looking up at character, dramatic perspective showing determination",
-  "over-the-shoulder view: one character seen from behind the other's shoulder",
-  "bird's eye view from directly above, showing spatial relationship between characters",
-  "dutch angle tilted composition, creating visual unease or energy",
-  "extreme close-up on eyes/expression, capturing raw emotion — NO front-facing stare",
-  "side profile silhouette, characters looking toward the horizon or at each other",
-  "three-quarter back view with depth, character looking away from camera into the scene",
-  "worm's eye view from ground level, dramatic upward framing",
-  "split-panel composition: left side shows one character, right side shows another reacting",
+  "wide panoramic establishing shot showing Korean traditional architecture (기와지붕, 궁궐, 한옥) with characters in historical context",
+  "formal portrait composition in 3/4 view, similar to Korean traditional portraiture (초상화), dignified pose showing rank and status",
+  "medium shot at eye level, characters in traditional Korean interior (대청마루, 서재) with period-accurate furnishings",
+  "low angle looking up at historical figure, dramatic sky behind, conveying authority and determination",
+  "over-the-shoulder view: one figure seen from behind another's shoulder during formal audience or discussion",
+  "elevated bird's eye perspective reminiscent of court documentary painting (의궤), showing ceremonial arrangement",
+  "close-up on hands performing significant historical action (writing with 붓, wielding sword, operating instrument)",
+  "extreme close-up on face/expression capturing pivotal emotional moment — three-quarter profile view",
+  "side profile silhouette against Korean landscape (산, 강, 들판), contemplative or decisive moment",
+  "three-quarter back view with depth, figure looking out toward vast Korean scenery, reflecting on destiny",
+  "ground-level view from courtyard showing grand scale of Korean palace or fortress architecture",
+  "split composition: left side shows one historical figure, right side shows another reacting across formal space",
 ];
 
-// Character gaze/interaction patterns — prevents static front-facing poses
+// Historical interaction patterns — period-appropriate character dynamics
 const CHARACTER_INTERACTIONS = [
-  "Characters face EACH OTHER in conversation, NOT the camera. Show natural eye contact between them.",
-  "Main character looks DOWN at something important, lost in thought — three-quarter profile view.",
-  "Characters stand SIDE BY SIDE looking at the same direction, shared gaze toward a distant object.",
-  "One character in foreground (back to camera), facing another character who is reacting.",
-  "Character turns AWAY from camera, looking over shoulder — dynamic manga pose.",
-  "Two characters at different heights (one sitting, one standing), looking at each other.",
-  "Character mid-action: running, reaching, fighting — body in motion, NOT posing for camera.",
-  "Close-up of hands or gesture while characters interact, faces partially visible.",
-  "One character speaking animatedly while others listen with varied reactions.",
-  "Character gazing out a window/at scenery, shown from behind or side profile.",
-  "Characters walking together, captured mid-stride from a following or leading angle.",
-  "Dramatic confrontation: characters facing each other from opposite sides of the frame.",
+  "Historical figures face EACH OTHER in formal Korean discussion, proper seated posture (정좌) or standing audience.",
+  "Main figure studies documents or inventions intently, three-quarter profile, scholarly concentration.",
+  "Figures stand SIDE BY SIDE surveying a battlefield, landscape, or construction — shared gaze toward their vision.",
+  "One figure in foreground (back to viewer), formally addressing another figure who listens with respect or defiance.",
+  "Figure turns from a window or balcony, looking over shoulder — moment of decision or revelation.",
+  "Two figures at different heights reflecting status (왕 on throne, 신하 bowing; 스승 standing, 제자 seated).",
+  "Figure in dynamic historical action: commanding troops, practicing calligraphy, conducting experiment — purposeful motion.",
+  "Close-up of hands performing period craft (writing 한글, forging metal, mixing medicine) with faces partially visible.",
+  "One figure passionately arguing a position while court officials or colleagues show varied reactions.",
+  "Figure gazing at stars, maps, or the horizon from a traditional Korean setting, shown from behind or side.",
+  "Figures walking together through historical Korean scenery (궁궐 회랑, 시장, 산길), captured mid-stride.",
+  "Dramatic confrontation: figures facing each other across a formal court space or battlefield.",
 ];
 
-// Anime visual direction keywords by genre mood
-function getAnimeDirection(genre: string, tone: string): string {
+// Historical visual direction by period and tone
+function getHistoricalDirection(genre: string, tone: string): string {
   const g = genre.toLowerCase();
   const t = tone.toLowerCase();
 
   // Tone-based mood modifier
-  const moodMod = t.includes('어둡') || t.includes('절망') || t.includes('비극') ? ' Use muted, somber color palette.'
-    : t.includes('밝') || t.includes('긍정') || t.includes('희망') ? ' Use warm, uplifting color palette.'
-    : t.includes('긴장') || t.includes('긴박') || t.includes('위협') ? ' Use desaturated tones with sharp contrast.'
+  const moodMod = t.includes('비장') || t.includes('갈등') || t.includes('비극') ? ' Use muted, somber color palette with dramatic shadows.'
+    : t.includes('따뜻') || t.includes('일화') || t.includes('우정') ? ' Use warm, golden color palette with soft natural lighting.'
+    : t.includes('전쟁') || t.includes('긴장') || t.includes('대립') ? ' Use desaturated earth tones with sharp contrast and smoky atmosphere.'
+    : t.includes('교육') || t.includes('객관') || t.includes('설명') ? ' Use clear, balanced lighting with precise detail rendering.'
     : '';
 
-  if (g.includes('sf') || g.includes('사이버') || g.includes('디스토피아'))
-    return "Anime direction: dramatic neon lighting, sharp highlights, deep shadows like Ghost in the Shell or Psycho-Pass." + moodMod;
-  if (g.includes('판타지') || g.includes('마법') || g.includes('검과'))
-    return "Anime direction: epic fantasy lighting with volumetric rays, vivid sky colors, detailed environments like Frieren or Mushoku Tensei." + moodMod;
-  if (g.includes('호러') || g.includes('고딕') || g.includes('심리'))
-    return "Anime direction: oppressive shadows, desaturated palette with selective color, unsettling angles like Another or Paranoia Agent." + moodMod;
-  if (g.includes('코미디') || g.includes('슬랩스틱'))
-    return "Anime direction: bright saturated colors, exaggerated expressions, clean bold lines like Spy x Family or Konosuba." + moodMod;
-  if (g.includes('로맨스') || g.includes('일상'))
-    return "Anime direction: soft warm lighting, bokeh backgrounds, gentle color grading like Your Lie in April or Clannad." + moodMod;
-  if (g.includes('액션') || g.includes('슈퍼히어로') || g.includes('격투'))
-    return "Anime direction: dynamic speed lines, impact frames, high-contrast action poses like Demon Slayer or Jujutsu Kaisen." + moodMod;
-  if (g.includes('스포츠'))
-    return "Anime direction: kinetic motion blur, sweat/effort details, dramatic close-ups like Haikyuu or Blue Lock." + moodMod;
-  if (g.includes('누아르') || g.includes('범죄') || g.includes('스릴러'))
-    return "Anime direction: heavy chiaroscuro, rain/wet surfaces, moody atmosphere like 91 Days or Baccano." + moodMod;
-  if (g.includes('성장') || g.includes('드라마'))
-    return "Anime direction: naturalistic lighting, scenic backgrounds with emotional weight like 3-gatsu no Lion or Anohana." + moodMod;
+  if (g.includes('고구려') || g.includes('백제') || g.includes('신라') || g.includes('가야') || g.includes('삼국'))
+    return "Historical direction: Ancient Korean Three Kingdoms aesthetic — earthen fortress walls, iron armor and weapons, tomb mural (고분벽화) color palette, bold warrior compositions, nature-integrated wooden architecture." + moodMod;
+  if (g.includes('발해') || g.includes('고려') || g.includes('몽골'))
+    return "Historical direction: Goryeo dynasty aesthetic — celadon (청자) blue-green tones, Buddhist temple atmosphere, elegant court culture, ornate architectural details, refined silk garments." + moodMod;
+  if (g.includes('조선 건국') || g.includes('세종') || g.includes('사림') || g.includes('과학') || g.includes('성리학'))
+    return "Historical direction: Early Joseon aesthetic — Confucian scholarly atmosphere, clean hanbok lines, serene palace gardens, ink-wash landscape influence, dignified formal compositions." + moodMod;
+  if (g.includes('임진') || g.includes('병자') || g.includes('영정조') || g.includes('실학') || g.includes('민란'))
+    return "Historical direction: Late Joseon aesthetic — vibrant folk culture (민화) colors, bustling marketplace scenes, scholarly retreats, dynamic historical drama atmosphere." + moodMod;
+  if (g.includes('개화') || g.includes('독립') || g.includes('항일') || g.includes('해외') || g.includes('문화 독립'))
+    return "Historical direction: Early modern Korean aesthetic — newspaper illustration style, sepia tones with selective color, Western-Korean fusion architecture, revolutionary determination atmosphere." + moodMod;
+  if (g.includes('건국') || g.includes('6.25') || g.includes('산업') || g.includes('민주') || g.includes('과학기술') || g.includes('문화예술'))
+    return "Historical direction: Modern Korean aesthetic — documentary photography influence, urban development imagery, contrast between tradition and modernity, hopeful nation-building atmosphere." + moodMod;
 
-  return "Anime direction: professional anime production quality with cinematic framing and expressive character acting." + moodMod;
+  return "Historical direction: Professional Korean historical illustration quality with cinematic framing, period-accurate costumes, and dignified character presentation." + moodMod;
 }
 
 function getCompositionDirective(pageIndex: number, previousScenes: string[], genre: string, tone: string): string {
   const angle = CAMERA_ANGLES[pageIndex % CAMERA_ANGLES.length];
   const interaction = CHARACTER_INTERACTIONS[pageIndex % CHARACTER_INTERACTIONS.length];
-  const animeDir = getAnimeDirection(genre, tone);
+  const historicalDir = getHistoricalDirection(genre, tone);
 
   const avoidance = previousScenes.length > 0
     ? `\nAVOID REPEATING: Do NOT reuse these compositions — ${previousScenes.slice(-3).join('; ')}`
@@ -532,8 +545,8 @@ function getCompositionDirective(pageIndex: number, previousScenes: string[], ge
 
   return `CAMERA/ANGLE: ${angle}.
 CHARACTER DIRECTION: ${interaction}
-${animeDir}
-CRITICAL: Characters must NEVER stare directly at the camera like a portrait photo. They should interact with each other, the environment, or their own emotions naturally — like real anime cinematography.${avoidance}`;
+${historicalDir}
+CRITICAL: Characters must NEVER stare directly at the camera. They should interact with each other, the historical environment, or be captured in natural moments of action and contemplation — like Korean historical drama (사극) cinematography.${avoidance}`;
 }
 
 // ======== Image Generation ========
@@ -544,7 +557,7 @@ export async function generateImage(beat: Beat, type: ComicFace['type'], pageInd
   // === Style Configuration ===
   const matchedPreset = STYLE_PRESETS.find(p => p.name === state.selectedStylePreset);
   const baseStyle = matchedPreset?.prompt || state.selectedGenre;
-  const stylePrompt = `${baseStyle} manga comic art, professional quality`;
+  const stylePrompt = `${baseStyle} Korean historical biography illustration, historically accurate, professional quality`;
 
   // === Collect previous scene descriptions to avoid repetition ===
   const previousScenes = state.comicFaces
@@ -583,29 +596,29 @@ export async function generateImage(beat: Beat, type: ComicFace['type'], pageInd
 
     // Include detailed desc for each character to maintain visual consistency
     if (state.hero) {
-      parts.push(`HERO (match reference image): ${state.hero.desc}`);
+      parts.push(`MAIN HISTORICAL FIGURE (match reference image): ${state.hero.desc}`);
       if (state.hero.outfit || state.hero.props || state.hero.editPrompt) {
         const mods = [state.hero.outfit, state.hero.props, state.hero.editPrompt].filter(Boolean).join(', ');
-        parts.push(`Hero modifications: ${mods}`);
+        parts.push(`Figure modifications: ${mods}`);
       }
     }
     if (state.friend) {
-      parts.push(`FRIEND (match reference image): ${state.friend.desc}`);
+      parts.push(`ASSOCIATED FIGURE 1 (match reference image): ${state.friend.desc}`);
       if (state.friend.outfit || state.friend.props || state.friend.editPrompt) {
         const mods = [state.friend.outfit, state.friend.props, state.friend.editPrompt].filter(Boolean).join(', ');
-        parts.push(`Friend modifications: ${mods}`);
+        parts.push(`Associated figure 1 modifications: ${mods}`);
       }
     }
     if (state.friend2) {
-      parts.push(`EXTRA (match reference image): ${state.friend2.desc}`);
+      parts.push(`ASSOCIATED FIGURE 2 (match reference image): ${state.friend2.desc}`);
       if (state.friend2.outfit || state.friend2.props || state.friend2.editPrompt) {
         const mods = [state.friend2.outfit, state.friend2.props, state.friend2.editPrompt].filter(Boolean).join(', ');
-        parts.push(`Extra modifications: ${mods}`);
+        parts.push(`Associated figure 2 modifications: ${mods}`);
       }
     }
 
     if (parts.length > 0) {
-      parts.push('CHARACTER CONSISTENCY: These characters MUST look identical across all pages — same hair color/style, same eye color, same outfit unless explicitly changed.');
+      parts.push('CHARACTER CONSISTENCY: These historical figures MUST look identical across all pages — same facial features, same traditional attire, same accessories unless the narrative explicitly changes their appearance (e.g., aging, changing rank).');
     }
 
     return parts.join('\n');
@@ -618,42 +631,42 @@ export async function generateImage(beat: Beat, type: ComicFace['type'], pageInd
   let prompt = "";
 
   if (type === 'cover') {
-    // COVER: Title text + hero illustration
+    // COVER: Title text + historical figure illustration
     const title = state.coverTitle || state.storyTitle || state.selectedGenre;
-    prompt = `${stylePrompt}. Create a manga/comic COVER PAGE for the title "${title}".
+    prompt = `${stylePrompt}. Create a Korean historical biography comic COVER PAGE for the title "${title}".
 
 ${buildCharInstructions()}
 
-TITLE TEXT: Render the title "${title}" prominently at the top or center of the cover in bold, stylized lettering that matches the genre mood. The title must be clearly readable.
+TITLE TEXT: Render the title "${title}" prominently at the top or center of the cover in bold, stylized Korean calligraphy-inspired lettering. The title must be clearly readable.
 
-COMPOSITION: ${state.coverStyle || "Dynamic hero pose, centered composition, atmospheric background"}. The cover should look like a professional manga volume cover with the title integrated into the design.
+COMPOSITION: ${state.coverStyle || "Dignified historical figure pose, centered composition, period-appropriate atmospheric background with Korean traditional architecture or landscape"}. The cover should convey the gravitas of a historical biography with the figure in period-accurate attire.
 
-NEGATIVE: No watermarks, logos, or signatures. Do NOT add any text other than the title "${title}".
+NEGATIVE: No watermarks, logos, or signatures. No modern elements. No anachronistic objects. Do NOT add any text other than the title "${title}".
 ${variationSeed}`;
 
   } else if (type === 'back_cover') {
-    // BACK COVER: Visual conclusion
-    prompt = `${stylePrompt}. Create an ending page illustration.
+    // BACK COVER: Historical legacy illustration
+    prompt = `${stylePrompt}. Create a biography epilogue illustration showing the historical figure's lasting legacy.
 
-${state.hero ? buildCharInstructions() : 'Show the main character in a reflective moment.'}
+${state.hero ? buildCharInstructions() : 'Show the main historical figure in a reflective, dignified moment.'}
 
-MOOD: ${state.coverStyle || "Peaceful conclusion, sense of completion, warm atmosphere"}
+MOOD: ${state.coverStyle || "Legacy and remembrance, sense of historical significance, golden hour atmosphere with Korean landscape"}. Show symbols of the figure's lasting contribution to Korean history.
 
-NEGATIVE: No text, "END" labels, numbers, watermarks, or signatures.
+NEGATIVE: No text, "END" labels, numbers, watermarks, or signatures. No modern elements.
 ${variationSeed}`;
 
   } else {
-    // STORY PAGE: Scene with optional dialogue/caption
+    // STORY PAGE: Historical scene with optional dialogue/caption
     const dialogueInstruction = beat.dialogue
-      ? ` Include manga speech bubble with: "${beat.dialogue}". Style: natural bubble tail pointing to speaker.`
+      ? ` Include speech bubble with: "${beat.dialogue}". Style: natural bubble tail pointing to speaker, clean and readable.`
       : '';
     const captionInstruction = beat.caption
-      ? ` Include subtle narration box (top corner) with: "${beat.caption}". Style: faint, like real manga narration.`
+      ? ` Include subtle narration box (top corner) with: "${beat.caption}". Style: elegant, like historical narration.`
       : '';
 
     const compositionDirective = getCompositionDirective(currentPageIndex, previousScenes, state.selectedGenre, state.storyTone);
 
-    prompt = `${stylePrompt}. PAGE ${currentPageIndex} — Illustrate this UNIQUE scene: ${beat.scene}
+    prompt = `${stylePrompt}. PAGE ${currentPageIndex} — Illustrate this UNIQUE historical scene: ${beat.scene}
 
 ${buildCharInstructions()}
 
@@ -661,9 +674,11 @@ DIALOGUE/CAPTION:${dialogueInstruction}${captionInstruction}
 
 ${compositionDirective}
 
-IMPORTANT: This scene must look DISTINCTLY DIFFERENT from all other pages. Characters must NEVER face the camera directly — draw them interacting with each other, looking at objects, turning away, or in mid-action. Use natural anime cinematography: over-shoulder shots, profile conversations, dynamic action poses. Vary background, poses, lighting, and color temperature.
+HISTORICAL ACCURACY: All depicted clothing, architecture, tools, furniture, and customs MUST be appropriate to the specific Korean historical period. No anachronistic elements (no modern objects, no out-of-era clothing).
 
-NEGATIVE: No watermarks, signatures, or random text outside of specified speech/caption bubbles. No sound effect symbols (POW, BAM, etc).
+IMPORTANT: This scene must look DISTINCTLY DIFFERENT from all other pages. Characters must NEVER face the camera directly — draw them interacting with each other, the historical environment, or captured in natural moments. Use Korean historical drama (사극) cinematography: formal audiences, battlefield tactics, scholarly discussions, ceremonial scenes. Vary background, poses, lighting, and composition.
+
+NEGATIVE: No watermarks, signatures, or random text outside of specified speech/caption bubbles. No modern objects. No Japanese or Chinese elements unless historically documented in the Korean context.
 ${variationSeed}`;
   }
 
@@ -719,9 +734,9 @@ export async function handleEditPage(base64WithMark: string, instruction: string
 
   try {
     const ai = getAI();
-    const prompt = `EDIT INSTRUCTION: ${instruction}. Focus on the RED marked area for changes. Maintain the original manga comic art style throughout.
+    const prompt = `EDIT INSTRUCTION: ${instruction}. Focus on the RED marked area for changes. Maintain the original historical illustration art style throughout. Ensure historical accuracy — all clothing, objects, and architecture must remain period-appropriate for Korean history.
 
-CRITICAL: Do NOT add any new text, letters, numbers, watermarks, signatures, or logos. If the original had text/speech bubbles, preserve them naturally but do not add any new written elements.`;
+CRITICAL: Do NOT add any new text, letters, numbers, watermarks, signatures, or logos. If the original had text/speech bubbles, preserve them naturally but do not add any new written elements. No modern or anachronistic elements.`;
     const res = await retryOperation(() => ai.models.generateContent({
       model: MODEL_IMAGE_EDIT,
       contents: { parts: [{ text: prompt }, { inlineData: { mimeType: detectMime(base64WithMark), data: toRawBase64(base64WithMark) } }] }
@@ -758,19 +773,19 @@ export async function handleRegeneratePage(updatedBeat: Beat) {
 // ======== Character Handlers ========
 export async function handleHeroInput(base64: string) {
   useStore.getState().setHero({ base64, desc: "분석 중..." });
-  const desc = await analyzeCharacterImage(base64, "HERO");
+  const desc = await analyzeCharacterImage(base64, "위인(주인공)");
   useStore.getState().setHero({ base64, desc });
 }
 
 export async function handleFriendInput(base64: string) {
   useStore.getState().setFriend({ base64, desc: "분석 중..." });
-  const desc = await analyzeCharacterImage(base64, "CO-STAR");
+  const desc = await analyzeCharacterImage(base64, "관련인물1");
   useStore.getState().setFriend({ base64, desc });
 }
 
 export async function handleFriend2Input(base64: string) {
   useStore.getState().setFriend2({ base64, desc: "분석 중..." });
-  const desc = await analyzeCharacterImage(base64, "EXTRA");
+  const desc = await analyzeCharacterImage(base64, "관련인물2");
   useStore.getState().setFriend2({ base64, desc });
 }
 
@@ -843,7 +858,7 @@ export async function launchStory() {
 
   // Auto-generate characters if none uploaded and analysis has profiles
   if (!state.hero && state.premiseAnalysis?.characterProfiles?.length) {
-    state.setAnalyzingStatus('🎭 캐릭터 자동 생성 중...');
+    state.setAnalyzingStatus('📜 역사 인물 자동 생성 중...');
     for (const profile of state.premiseAnalysis.characterProfiles) {
       const s = useStore.getState();
       const current = profile.role === 'hero' ? s.hero : profile.role === 'friend' ? s.friend : s.friend2;
@@ -906,4 +921,28 @@ export function handleChoice(p: number, c: string) {
   state.updateFace(`page-${p}`, { resolvedChoice: c });
   state.updateHistory(`page-${p}`, { resolvedChoice: c });
   if (p + 1 <= TOTAL_PAGES) generateBatch(p + 1, BATCH_SIZE);
+}
+
+// ======== Apply Historical Figure Preset ========
+export function applyFigurePreset(presetName: string) {
+  const preset = HISTORICAL_FIGURE_PRESETS.find(p => p.name === presetName);
+  if (!preset) return;
+  const state = useStore.getState();
+  state.setSelectedFigurePreset(preset.name);
+  state.setCustomPremise(preset.premise);
+  state.setSelectedGenre(preset.period);
+  state.setStoryTone(preset.tone);
+  state.setCoverTitle(preset.coverTitle);
+  state.setSelectedStylePreset(preset.stylePreset);
+  state.setHistoricalPeriod(preset.title);
+  state.setPremiseAnalysis({
+    suggestedGenre: preset.period,
+    suggestedTone: preset.tone,
+    suggestedTitle: preset.coverTitle,
+    coverStyle: `Historical biography cover for ${preset.name} — dignified portrait with period-appropriate setting`,
+    characterProfiles: preset.characters,
+    storyArc: [],
+    historicalPeriod: preset.title,
+    educationalNote: `${preset.name}의 일대기를 담은 전기 만화`,
+  });
 }

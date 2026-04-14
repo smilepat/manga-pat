@@ -1,6 +1,6 @@
 {
-  "name": "만화 공방",
-  "description": "나만의 맞춤형 AI 만화 생성기",
+  "name": "위인전 공방",
+  "description": "대한민국 위인 전기 만화 AI 생성기",
   "requestFramePermissions": [],
   "prompt": ""
 }

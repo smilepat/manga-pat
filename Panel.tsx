@@ -50,7 +50,7 @@ export const Panel: React.FC<PanelProps> = ({ face, allFaces, onChoice, onOpenBo
     return (
         <div className={`panel-container relative group ${isFullBleed ? '!p-0 !bg-gray-900' : ''}`}>
             <div className="gloss"></div>
-            {face.imageUrl && <img src={face.imageUrl} alt={face.narrative?.scene || (face.type === 'cover' ? '만화 표지' : face.type === 'back_cover' ? '뒷표지' : `${face.pageIndex || 0}페이지`)} className={`panel-image ${isFullBleed ? '!object-cover' : ''}`} />}
+            {face.imageUrl && <img src={face.imageUrl} alt={face.narrative?.scene || (face.type === 'cover' ? '전기 만화 표지' : face.type === 'back_cover' ? '뒷표지' : `${face.pageIndex || 0}페이지`)} className={`panel-image ${isFullBleed ? '!object-cover' : ''}`} />}
             
             {/* Edit/Regen Buttons */}
             {face.imageUrl && !face.isLoading && onEditPage && (
@@ -84,14 +84,14 @@ export const Panel: React.FC<PanelProps> = ({ face, allFaces, onChoice, onOpenBo
             {face.type === 'story' && face.pageIndex != null && !face.isDecisionPage && DECISION_PAGES.includes(face.pageIndex + 1) && face.imageUrl && !face.isLoading && (
                 <div className="absolute top-4 left-4 z-20 bg-amber-500/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse">
                     <span>⚡</span>
-                    <span>다음 페이지에서 선택지 등장!</span>
+                    <span>다음 페이지에서 역사적 분기점!</span>
                 </div>
             )}
 
             {/* Decision Buttons */}
             {face.isDecisionPage && face.choices.length > 0 && (
                 <div className={`absolute bottom-0 inset-x-0 p-6 pb-12 flex flex-col gap-3 items-center justify-end transition-opacity duration-500 ${face.resolvedChoice ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-gradient-to-t from-black/90 via-black/60 to-transparent z-20`}>
-                    <p className="text-white font-title text-2xl tracking-wider drop-shadow-lg mb-2">SCENE DIRECTION</p>
+                    <p className="text-white font-title text-2xl tracking-wider drop-shadow-lg mb-2">역사적 분기점</p>
                     {face.choices.map((choice, i) => (
                         <button key={i} onClick={(e) => { e.stopPropagation(); if(face.pageIndex) onChoice(face.pageIndex, choice); }}
                           className={`studio-btn w-full py-4 text-lg font-bold shadow-lg backdrop-blur-sm border border-white/20 ${
@@ -113,7 +113,7 @@ export const Panel: React.FC<PanelProps> = ({ face, allFaces, onChoice, onOpenBo
                       className="studio-btn bg-white text-black px-12 py-4 text-2xl font-bold hover:bg-gray-100 shadow-2xl disabled:opacity-50 disabled:cursor-wait ring-4 ring-black/5">
                          {(!allFaces.find(f => f.pageIndex === GATE_PAGE)?.imageUrl) ? 
                             `인쇄 대기 중... (${allFaces.filter(f => f.type==='story' && f.imageUrl && (f.pageIndex||0) <= GATE_PAGE).length}/${INITIAL_PAGES})` 
-                            : '▶ PLAY STORY'}
+                            : '▶ 이야기 시작'}
                      </button>
                  </div>
             )}

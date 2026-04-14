@@ -6,7 +6,8 @@
 
 import React from 'react';
 import toast from 'react-hot-toast';
-import { GENRES, GENRE_GROUPS, TONES, TONE_GROUPS, LANGUAGES, STYLE_PRESETS, TEXT_MODELS, IMAGE_MODELS, Persona, PremiseAnalysis } from './types';
+import { GENRES, GENRE_GROUPS, TONES, TONE_GROUPS, LANGUAGES, STYLE_PRESETS, HISTORICAL_FIGURE_PRESETS, TEXT_MODELS, IMAGE_MODELS, Persona, PremiseAnalysis } from './types';
+import { applyFigurePreset } from './aiEngine';
 
 interface SetupProps {
     show: boolean;
@@ -192,7 +193,7 @@ const CharacterCard = ({
                     )}
                     {!persona && (
                         <p className="text-[10px] text-gray-400 leading-relaxed">
-                            캐릭터 사진을 올리면 AI가 외형을 분석하여 만화에 반영합니다.
+                            역사 인물 사진이나 초상화를 올리면 AI가 분석하여 전기 만화에 반영합니다.
                         </p>
                     )}
                     <div>
@@ -200,7 +201,7 @@ const CharacterCard = ({
                         <input
                             type="text"
                             className="studio-input text-xs py-1.5"
-                            placeholder="예: 안경 착용, 붉은 머리"
+                            placeholder="예: 관복 착용, 턱수염"
                             value={persona?.editPrompt || ''}
                             onChange={(e) => onEditPrompt(e.target.value)}
                             disabled={!persona}
@@ -212,7 +213,7 @@ const CharacterCard = ({
                             <input
                                 type="text"
                                 className="studio-input text-xs py-1.5"
-                                placeholder="예: 검은색 정장"
+                                placeholder="예: 전통 갑옷, 도포"
                                 value={persona?.outfit || ''}
                                 onChange={(e) => onOutfit(e.target.value)}
                                 disabled={!persona}
@@ -223,7 +224,7 @@ const CharacterCard = ({
                             <input
                                 type="text"
                                 className="studio-input text-xs py-1.5"
-                                placeholder="예: 금테 안경, 지팡이"
+                                placeholder="예: 거북선 모형, 붓과 벼루"
                                 value={persona?.props || ''}
                                 onChange={(e) => onProps(e.target.value)}
                                 disabled={!persona}
@@ -246,7 +247,7 @@ const AnalysisResultCard: React.FC<{
         <div className="analysis-result">
             <div className="flex items-center gap-2 mb-4">
                 <span className="text-lg">✨</span>
-                <h3 className="font-title text-lg text-gray-800">AI 분석 결과</h3>
+                <h3 className="font-title text-lg text-gray-800">역사 분석 결과</h3>
             </div>
             
             {/* Title */}
@@ -258,7 +259,7 @@ const AnalysisResultCard: React.FC<{
             {/* Tags Row */}
             <div className="flex flex-wrap gap-2 mb-4">
                 <span className="analysis-tag bg-blue-50 text-blue-700 border-blue-200">
-                    🎭 {analysis.suggestedGenre}
+                    📜 {analysis.suggestedGenre}
                 </span>
                 <span className="analysis-tag bg-purple-50 text-purple-700 border-purple-200">
                     🗣️ {analysis.suggestedTone}
@@ -268,14 +269,14 @@ const AnalysisResultCard: React.FC<{
             {/* Characters */}
             {analysis.characterProfiles?.length > 0 && (
                 <div className="mb-4">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">캐릭터 구성</span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">인물 구성</span>
                     <div className="flex flex-col gap-2 mt-2">
                         {analysis.characterProfiles.map((c, i) => (
                             <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
                                 <span className="text-lg">{c.role === 'hero' ? '⭐' : c.role === 'friend' ? '🤝' : '🎭'}</span>
                                 <div>
                                     <span className="font-bold text-sm text-gray-800">{c.name}</span>
-                                    <span className="text-xs text-gray-400 ml-2">({c.role === 'hero' ? '주인공' : c.role === 'friend' ? '조연1' : '조연2'})</span>
+                                    <span className="text-xs text-gray-400 ml-2">({c.role === 'hero' ? '위인 (주인공)' : c.role === 'friend' ? '관련 인물 1' : '관련 인물 2'})</span>
                                     <p className="text-xs text-gray-500 mt-0.5">{c.appearance}</p>
                                 </div>
                             </div>
@@ -338,7 +339,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 <div className="text-center mb-10">
                     <div className="flex justify-center items-center gap-3 mb-4">
                         <div className="inline-block px-4 py-1 bg-blue-600 text-white text-xs font-bold tracking-[0.2em] uppercase rounded-full shadow-lg">
-                            AI Creative Studio
+                            AI 역사 전기 만화
                         </div>
                         <button 
                             onClick={props.onOpenApiKeyDialog}
@@ -348,10 +349,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         </button>
                     </div>
                     <h1 className="font-title text-5xl md:text-6xl text-gray-900 mb-4 tracking-tight">
-                        만화 공방 <span className="text-blue-600">.</span>
+                        위인전 공방 <span className="text-blue-600">.</span>
                     </h1>
                     <p className="text-gray-500 font-body max-w-2xl mx-auto">
-                        아이디어만 입력하면 AI가 캐릭터, 장르, 스타일을 자동으로 설정하고 만화를 제작합니다.
+                        대한민국 위인들의 이야기를 AI로 만드는 전기 만화. 위인을 선택하거나 직접 입력하세요.
                     </p>
                 </div>
 
@@ -361,7 +362,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <span className="text-xl">🔑</span>
                         <div className="flex-1">
                             <p className="text-sm font-bold text-amber-800">API 키가 설정되지 않았습니다</p>
-                            <p className="text-xs text-amber-600">만화를 생성하려면 Gemini API 키가 필요합니다. 클릭하여 설정하세요.</p>
+                            <p className="text-xs text-amber-600">전기 만화를 생성하려면 Gemini API 키가 필요합니다. 클릭하여 설정하세요.</p>
                         </div>
                         <span className="text-amber-400 text-sm font-bold">설정 →</span>
                     </div>
@@ -370,19 +371,41 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 {/* ========== QUICK START ========== */}
                 <section className="quick-start-card mb-8">
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-xl shadow-lg">✨</div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-xl shadow-lg">📜</div>
                         <div>
-                            <h2 className="text-2xl font-title text-gray-800">Quick Start</h2>
-                            <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">아이디어만 입력하세요</p>
+                            <h2 className="text-2xl font-title text-gray-800">위인 선택</h2>
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">위인을 선택하거나 직접 입력하세요</p>
+                        </div>
+                    </div>
+
+                    {/* Historical Figure Preset Grid */}
+                    <div className="mb-5">
+                        <label className="block text-sm font-bold text-gray-700 mb-3">한국 역사 위인 프리셋</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            {HISTORICAL_FIGURE_PRESETS.map(preset => (
+                                <button
+                                    key={preset.name}
+                                    onClick={() => applyFigurePreset(preset.name)}
+                                    className={`text-left px-3 py-2.5 rounded-lg border transition-all hover:shadow-md ${
+                                        props.customPremise === preset.premise
+                                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 shadow-sm'
+                                            : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
+                                    }`}
+                                >
+                                    <div className="text-xl mb-1">{preset.emoji}</div>
+                                    <div className="font-bold text-sm text-gray-800">{preset.name}</div>
+                                    <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{preset.title}</div>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
                     {/* Premise Input */}
                     <div className="mb-5">
-                        <textarea 
-                            value={props.customPremise} 
-                            onChange={(e) => props.onPremiseChange(e.target.value)} 
-                            placeholder={"어떤 만화를 만들고 싶으신가요?\n\n예: \"고등학생이 방과후에 버려진 연구소를 발견하고, 그 안에서 AI 로봇을 깨우는 이야기\""} 
+                        <textarea
+                            value={props.customPremise}
+                            onChange={(e) => props.onPremiseChange(e.target.value)}
+                            placeholder={"어떤 위인의 이야기를 만들고 싶으신가요?\n\n예: \"세종대왕이 한글을 창제하기까지의 과정과 반대 세력과의 갈등\""}
                             className="studio-input h-32 resize-none leading-relaxed text-base"
                         />
                     </div>
@@ -400,12 +423,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             {props.isAnalyzingPremise ? (
                                 <>
                                     <span className="inline-block animate-spin">⚙️</span>
-                                    <span>AI 분석 중...</span>
+                                    <span>역사 분석 중...</span>
                                 </>
                             ) : (
                                 <>
                                     <span>🧠</span>
-                                    <span>AI 분석하기</span>
+                                    <span>역사 분석하기</span>
                                 </>
                             )}
                         </button>
@@ -431,7 +454,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div className="flex items-center gap-3">
                                 <span className="text-lg">🎛️</span>
                                 <span className="font-title text-gray-700 text-lg">세부 설정</span>
-                                <span className="text-xs text-gray-400 font-bold">캐릭터 · 장르 · 톤 · 스타일</span>
+                                <span className="text-xs text-gray-400 font-bold">인물 · 시대 · 서술 톤 · 화풍</span>
                             </div>
                             <svg className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${props.showManualSettings ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -461,14 +484,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <section className="flex flex-col gap-5">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold font-title">1</div>
-                                <h2 className="text-2xl font-title text-gray-800">배우 캐스팅</h2>
+                                <h2 className="text-2xl font-title text-gray-800">역사 인물 설정</h2>
                                 {hasAnalysis && !props.hero && (
                                     <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-bold">AI 자동 생성 예정</span>
                                 )}
                             </div>
                             <CharacterCard
-                                role="주인공"
-                                subtitle="Main Character"
+                                role="위인 (주인공)"
+                                subtitle="Historical Figure"
                                 persona={props.hero}
                                 onInput={props.onHeroInput}
                                 onRemove={props.onHeroRemove}
@@ -477,8 +500,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 onProps={props.onHeroProps}
                             />
                             <CharacterCard
-                                role="조연 1"
-                                subtitle="Sidekick / Rival"
+                                role="관련 인물 1"
+                                subtitle="Key Associate"
                                 persona={props.friend}
                                 onInput={props.onFriendInput}
                                 onRemove={props.onFriendRemove}
@@ -487,8 +510,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 onProps={props.onFriendProps}
                             />
                             <CharacterCard
-                                role="조연 2"
-                                subtitle="Extra"
+                                role="관련 인물 2"
+                                subtitle="Secondary Figure"
                                 persona={props.friend2}
                                 onInput={props.onFriend2Input}
                                 onRemove={props.onFriend2Remove}
@@ -502,13 +525,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <section className="flex flex-col gap-5">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold font-title">2</div>
-                                <h2 className="text-2xl font-title text-gray-800">스토리 & 연출</h2>
+                                <h2 className="text-2xl font-title text-gray-800">시대 & 서술 방식</h2>
                             </div>
                             
                             <div className="studio-card p-6 flex flex-col gap-5">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block font-bold text-gray-700 mb-2 text-sm">장르</label>
+                                        <label className="block font-bold text-gray-700 mb-2 text-sm">시대 배경</label>
                                         <select value={props.selectedGenre} onChange={(e) => props.onGenreChange(e.target.value)} className={`studio-input cursor-pointer ${hasAnalysis ? 'auto-filled' : ''}`}>
                                             {GENRE_GROUPS.map(group => (
                                                 <optgroup key={group.category} label={group.category}>
@@ -518,7 +541,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block font-bold text-gray-700 mb-2 text-sm">분위기 (Tone)</label>
+                                        <label className="block font-bold text-gray-700 mb-2 text-sm">서술 톤</label>
                                         <select value={props.storyTone} onChange={(e) => props.onToneChange(e.target.value)} className={`studio-input cursor-pointer ${hasAnalysis ? 'auto-filled' : ''}`}>
                                             {TONE_GROUPS.map(group => (
                                                 <optgroup key={group.category} label={group.category}>
@@ -535,12 +558,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <section className="flex flex-col gap-5">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold font-title">3</div>
-                                <h2 className="text-2xl font-title text-gray-800">아트 디렉팅</h2>
+                                <h2 className="text-2xl font-title text-gray-800">화풍 설정</h2>
                             </div>
 
-                            <div className="studio-card p-6 flex flex-col gap-5 border-t-4 border-pink-500">
+                            <div className="studio-card p-6 flex flex-col gap-5 border-t-4 border-amber-600">
                                 <div>
-                                    <label className="block font-bold text-gray-700 mb-2 text-sm">작품 제목</label>
+                                    <label className="block font-bold text-gray-700 mb-2 text-sm">전기만화 제목</label>
                                     <input 
                                         type="text"
                                         value={props.coverTitle}
@@ -552,7 +575,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                 {/* Style Presets */}
                                 <div>
-                                    <label className="block font-bold text-gray-700 mb-2 text-sm">아트 스타일 프리셋</label>
+                                    <label className="block font-bold text-gray-700 mb-2 text-sm">화풍 프리셋</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {STYLE_PRESETS.map(preset => (
                                             <button
@@ -572,11 +595,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                                 
                                 <div>
-                                    <label className="block font-bold text-gray-700 mb-2 text-sm">표지 아트 스타일 (커스텀)</label>
-                                    <textarea 
-                                        value={props.coverStyle} 
-                                        onChange={(e) => props.onCoverStyleChange(e.target.value)} 
-                                        placeholder="예: 90년대 셀 애니메이션 포스터 스타일, 강렬한 네온 조명, 웅장한 배경" 
+                                    <label className="block font-bold text-gray-700 mb-2 text-sm">표지 화풍 (직접 입력)</label>
+                                    <textarea
+                                        value={props.coverStyle}
+                                        onChange={(e) => props.onCoverStyleChange(e.target.value)}
+                                        placeholder="예: 조선시대 궁중 기록화 스타일, 격식 있는 구도, 금박 장식" 
                                         className={`studio-input h-24 resize-none ${hasAnalysis && props.coverStyle ? 'auto-filled' : ''}`}
                                     />
                                 </div>
@@ -629,22 +652,23 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className="studio-btn w-full bg-blue-600 text-white text-xl py-5 hover:bg-blue-700 shadow-xl hover:shadow-blue-500/30 transition-all disabled:bg-gray-300 disabled:shadow-none rounded-2xl"
                     >
                         <span>🎬</span>
-                        <span>{props.isTransitioning ? '제작 중...' : '프로젝트 생성'}</span>
+                        <span>{props.isTransitioning ? '제작 중...' : '전기 만화 제작'}</span>
                     </button>
                     {!canLaunch && (
                         <p className="text-center text-red-500 text-xs mt-3 font-bold">
-                            * 시놉시스를 입력하고 AI 분석을 실행하거나, 주인공 사진을 등록해주세요
+                            * 위인 정보를 입력하고 역사 분석을 실행하거나, 인물 사진을 등록해주세요
                         </p>
                     )}
                     {canLaunch && !props.hero && hasAnalysis && (
                         <p className="text-center text-purple-500 text-xs mt-3 font-bold">
-                            🎭 캐릭터가 AI 분석 결과로 자동 생성됩니다
+                            📜 역사 인물이 분석 결과로 자동 생성됩니다
                         </p>
                     )}
                 </div>
                 
                 <footer className="mt-20 text-center text-gray-400 text-xs font-body flex flex-col items-center gap-2">
-                    <p>© 2025 만화 공방. Powered by Gemini AI.</p>
+                    <p>© 2025 위인전 공방. Powered by Gemini AI.</p>
+                    <p className="text-[10px] text-gray-300 mt-1">AI가 생성한 역사적 내용은 참고용이며, 정확한 역사 사실과 다를 수 있습니다.</p>
                     <a href="https://github.com/Reasonofmoon/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                         <span>달의이성 (Reasonofmoon)</span>

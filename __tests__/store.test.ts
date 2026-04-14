@@ -34,10 +34,26 @@ describe('Zustand AppStore', () => {
     it('should update project settings', () => {
       useStore.getState().setSelectedGenre(GENRES[1]);
       useStore.getState().setStoryTitle("My Epic Manga");
-      
+
       const state = useStore.getState();
       expect(state.selectedGenre).toBe(GENRES[1]);
       expect(state.storyTitle).toBe("My Epic Manga");
+    });
+
+    it('should have selectedFigurePreset default to null', () => {
+      expect(useStore.getState().selectedFigurePreset).toBeNull();
+    });
+
+    it('should set and reset selectedFigurePreset', () => {
+      useStore.getState().setSelectedFigurePreset('세종대왕');
+      expect(useStore.getState().selectedFigurePreset).toBe('세종대왕');
+
+      useStore.getState().setHistoricalPeriod('조선 전기');
+      expect(useStore.getState().historicalPeriod).toBe('조선 전기');
+
+      useStore.getState().resetProjectSettings();
+      expect(useStore.getState().selectedFigurePreset).toBeNull();
+      expect(useStore.getState().historicalPeriod).toBe('');
     });
   });
 

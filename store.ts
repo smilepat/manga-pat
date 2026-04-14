@@ -10,7 +10,7 @@ import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { enableMapSet } from 'immer';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
-import { GENRES, TONES, LANGUAGES, TEXT_MODELS, IMAGE_MODELS, ComicFace, Beat, Persona, PremiseAnalysis } from './types';
+import { GENRES, TONES, LANGUAGES, TEXT_MODELS, IMAGE_MODELS, STYLE_PRESETS, ComicFace, Beat, Persona, PremiseAnalysis } from './types';
 
 enableMapSet();
 
@@ -55,6 +55,8 @@ interface ProjectSlice {
   selectedTextModel: string;
   selectedImageModel: string;
   premiseAnalysis: PremiseAnalysis | null;
+  selectedFigurePreset: string | null;
+  historicalPeriod: string;
   setSelectedGenre: (v: string) => void;
   setSelectedLanguage: (v: string) => void;
   setCustomPremise: (v: string) => void;
@@ -67,6 +69,8 @@ interface ProjectSlice {
   setSelectedTextModel: (v: string) => void;
   setSelectedImageModel: (v: string) => void;
   setPremiseAnalysis: (v: PremiseAnalysis | null) => void;
+  setSelectedFigurePreset: (v: string | null) => void;
+  setHistoricalPeriod: (v: string) => void;
   resetProjectSettings: () => void;
 }
 
@@ -152,6 +156,8 @@ export const useStore = create<AppStore>()(
       selectedTextModel: TEXT_MODELS[0].id,
       selectedImageModel: IMAGE_MODELS[0].id,
       premiseAnalysis: null,
+      selectedFigurePreset: null,
+      historicalPeriod: "",
       setSelectedGenre: (v) => set({ selectedGenre: v }),
       setSelectedLanguage: (v) => set({ selectedLanguage: v }),
       setCustomPremise: (v) => set({ customPremise: v }),
@@ -164,6 +170,8 @@ export const useStore = create<AppStore>()(
       setSelectedTextModel: (v) => set({ selectedTextModel: v }),
       setSelectedImageModel: (v) => set({ selectedImageModel: v }),
       setPremiseAnalysis: (v) => set({ premiseAnalysis: v }),
+      setSelectedFigurePreset: (v) => set({ selectedFigurePreset: v }),
+      setHistoricalPeriod: (v) => set({ historicalPeriod: v }),
       resetProjectSettings: () => set((state) => {
         state.selectedGenre = GENRES[0];
         state.selectedLanguage = LANGUAGES[0].code;
@@ -177,6 +185,8 @@ export const useStore = create<AppStore>()(
         state.selectedTextModel = TEXT_MODELS[0].id;
         state.selectedImageModel = IMAGE_MODELS[0].id;
         state.premiseAnalysis = null;
+        state.selectedFigurePreset = null;
+        state.historicalPeriod = "";
       }),
 
       // ---- Generation State ----
@@ -244,6 +254,8 @@ export const useStore = create<AppStore>()(
         state.coverStyle = "";
         state.customPremise = "";
         state.premiseAnalysis = null;
+        state.selectedFigurePreset = null;
+        state.historicalPeriod = "";
         state.analyzingStatus = "";
       }),
     })),
@@ -269,6 +281,8 @@ export const useStore = create<AppStore>()(
         selectedTextModel: state.selectedTextModel,
         selectedImageModel: state.selectedImageModel,
         premiseAnalysis: state.premiseAnalysis,
+        selectedFigurePreset: state.selectedFigurePreset,
+        historicalPeriod: state.historicalPeriod,
         // Generation data (completed pages only)
         // NOTE: isStarted and showSetup are intentionally NOT persisted.
         // On refresh the user always lands on the Setup screen — this prevents
@@ -290,6 +304,9 @@ export const useStore = create<AppStore>()(
             // Validate persisted model IDs against available models
             const validTextIds = new Set(TEXT_MODELS.map(m => m.id));
             const validImageIds = new Set(IMAGE_MODELS.map(m => m.id));
+            const validGenres = new Set(GENRES);
+            const validTones = new Set(TONES);
+            const validPresets = new Set(STYLE_PRESETS.map(p => p.name));
 
             useStore.setState((s) => ({
               _hasHydrated: true,
@@ -301,6 +318,12 @@ export const useStore = create<AppStore>()(
               // Reset invalid model selections to defaults
               selectedTextModel: validTextIds.has(s.selectedTextModel) ? s.selectedTextModel : TEXT_MODELS[0].id,
               selectedImageModel: validImageIds.has(s.selectedImageModel) ? s.selectedImageModel : IMAGE_MODELS[0].id,
+              // Reset invalid genre/tone/preset from old domain data
+              selectedGenre: validGenres.has(s.selectedGenre) ? s.selectedGenre : GENRES[0],
+              storyTone: validTones.has(s.storyTone) ? s.storyTone : TONES[0],
+              selectedStylePreset: !s.selectedStylePreset || validPresets.has(s.selectedStylePreset) ? s.selectedStylePreset : '',
+              selectedFigurePreset: s.selectedFigurePreset || null,
+              historicalPeriod: s.historicalPeriod || "",
               // Clear any stale isLoading flags that survived serialization
               comicFaces: s.comicFaces.map(f => ({ ...f, isLoading: false })),
               history: s.history.map(h => ({ ...h, isLoading: false })),
