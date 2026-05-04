@@ -30,13 +30,19 @@ export const useApiKey = () => {
   }, []);
 
   const validateApiKey = useCallback(async (): Promise<boolean> => {
-    // First check localStorage
+    // 1. User-entered key in localStorage (always wins)
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && stored.trim().length > 10) {
       return true;
     }
-    
-    // Fallback: check aistudio integration
+
+    // 2. Deployer-injected key baked in at build time (Vite inlines VITE_* vars)
+    const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (envKey && envKey.trim().length > 10) {
+      return true;
+    }
+
+    // 3. AI Studio runtime integration
     const aistudio = (window as any).aistudio;
     if (aistudio) {
       try {
@@ -60,7 +66,12 @@ export const useApiKey = () => {
   }, [setApiKey]);
 
   const getApiKey = useCallback((): string => {
-    return localStorage.getItem(STORAGE_KEY) || (window as any).process?.env?.API_KEY || '';
+    return (
+      localStorage.getItem(STORAGE_KEY) ||
+      import.meta.env.VITE_GEMINI_API_KEY ||
+      (window as any).process?.env?.API_KEY ||
+      ''
+    );
   }, []);
 
   const clearApiKey = useCallback(() => {

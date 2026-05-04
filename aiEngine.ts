@@ -16,7 +16,8 @@ const MODEL_IMAGE_EDIT = "gemini-2.5-flash-image"; // Image-capable model for ed
 const STORAGE_KEY = 'manga-gongbang-api-key';
 
 function getApiKey(): string {
-  return localStorage.getItem(STORAGE_KEY) || '';
+  // Priority: user-entered (localStorage) > deployer-injected build-time env
+  return localStorage.getItem(STORAGE_KEY) || import.meta.env.VITE_GEMINI_API_KEY || '';
 }
 
 function getAI() {

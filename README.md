@@ -54,9 +54,30 @@ vercel --prod       # 프로덕션 배포
 | Output Directory | `dist` |
 | Install Command | `npm install` |
 
-### API 키 처리
+### API 키 처리 — 두 가지 선택지
 
-이 앱은 **클라이언트 측에서 사용자가 직접 키를 입력**하는 구조입니다 ([useApiKey.ts](useApiKey.ts), [ApiKeyDialog.tsx](ApiKeyDialog.tsx)). 따라서:
+배포자가 키 처리 방식을 선택할 수 있습니다.
 
-- Vercel 환경 변수에 `GEMINI_API_KEY`를 설정할 필요가 없습니다.
-- 정적 SPA 특성상 빌드 시 주입된 키는 브라우저에 노출되므로 현재 방식이 더 안전합니다.
+#### 옵션 A — 사용자 직접 입력 (기본, 권장)
+
+아무 환경 변수도 설정하지 않으면 앱 첫 실행 시 [ApiKeyDialog.tsx](ApiKeyDialog.tsx)가 표시되고 사용자가 본인의 [Gemini API 키](https://aistudio.google.com/apikey)를 입력합니다. 키는 사용자 브라우저의 localStorage에만 저장되며 서버나 빌드 산출물에 포함되지 않습니다.
+
+- ✅ 공개 배포에 안전
+- ✅ 키 사용 비용을 사용자가 부담
+- ⚠️ 사용자가 키를 발급받는 단계를 거쳐야 함
+
+#### 옵션 B — 배포자가 키 주입 (내부/개인용)
+
+[.env.example](.env.example)을 `.env.local`로 복사하고 `GEMINI_API_KEY`(또는 `VITE_GEMINI_API_KEY`)를 설정한 뒤 빌드하면, 키 입력 다이얼로그가 표시되지 않고 주입된 키로 바로 동작합니다. Vercel을 쓴다면 대시보드 → Settings → Environment Variables에 동일하게 등록하면 됩니다 — 두 이름 모두 [vite.config.ts](vite.config.ts)에서 인식합니다.
+
+```bash
+cp .env.example .env.local
+# .env.local 편집: GEMINI_API_KEY=AIzaSy... 주석 해제 및 값 입력
+npm run build
+```
+
+우선순위: 사용자가 다이얼로그로 본인 키를 입력하면 localStorage에 저장된 그 키가 항상 우선됩니다. 즉 옵션 B로 배포해도 사용자는 자기 키로 덮어쓸 수 있습니다 ([useApiKey.ts:35-46](useApiKey.ts#L35-L46), [aiEngine.ts:18-21](aiEngine.ts#L18-L21)).
+
+- ⚠️ **보안 경고**: Vite의 `define` 옵션이 이 키를 빌드 시 JS 번들에 평문으로 인라인합니다. 배포된 사이트의 소스를 보는 누구나 키를 추출할 수 있으니, 본인/내부 배포에만 사용하고 [Google Cloud 콘솔](https://console.cloud.google.com/apis/credentials)에서 해당 키에 **HTTP referrer 제한**을 반드시 거세요.
+- ✅ 사용자가 키 입력 단계 없이 바로 사용 가능
+- ❌ 키 사용 비용을 배포자가 부담
