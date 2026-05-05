@@ -81,3 +81,80 @@ npm run build
 - ⚠️ **보안 경고**: Vite의 `define` 옵션이 이 키를 빌드 시 JS 번들에 평문으로 인라인합니다. 배포된 사이트의 소스를 보는 누구나 키를 추출할 수 있으니, 본인/내부 배포에만 사용하고 [Google Cloud 콘솔](https://console.cloud.google.com/apis/credentials)에서 해당 키에 **HTTP referrer 제한**을 반드시 거세요.
 - ✅ 사용자가 키 입력 단계 없이 바로 사용 가능
 - ❌ 키 사용 비용을 배포자가 부담
+
+## 운영 가이드 (Operations)
+
+현재 프로덕션에 적용된 보안 구성과 검증/조정 방법.
+
+### 활성 구성
+
+| 항목 | 값 |
+|------|-----|
+| Production URL | [manga-pat.vercel.app](https://manga-pat.vercel.app) |
+| Vercel 프로젝트 | `prompt-improvement-dm-pat/manga-pat` |
+| GCP 프로젝트 | `gen-lang-client-0081580267` (project number: `452237528328`) |
+| API 키 UID | `469659c4-c4be-4318-bad5-799e5c1074a6` |
+| 키 displayName | `Gemini API Key` |
+
+### 3중 방어선
+
+1. **API target 제한** → `generativelanguage.googleapis.com` 만 허용 (다른 Google API로 전용 불가)
+2. **HTTP referrer 제한** → `https://manga-pat.vercel.app/*`, `https://*.vercel.app/*` 만 허용
+3. **일일 요청 캡** → 모델당 500/일 (`generate_requests_per_model_per_day` consumer override)
+
+### 현재 상태 확인 (CLI)
+
+```powershell
+# gcloud 경로 (Windows)
+$env:PATH = "C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin;$env:PATH"
+
+# 1. API 키 제한 확인
+gcloud services api-keys describe 469659c4-c4be-4318-bad5-799e5c1074a6 `
+  --project=gen-lang-client-0081580267 `
+  --format="json(displayName,restrictions)"
+
+# 2. 일일 캡 확인 (500/d 적용 여부)
+$token = gcloud auth print-access-token
+Invoke-RestMethod `
+  -Uri "https://serviceusage.googleapis.com/v1beta1/projects/452237528328/services/generativelanguage.googleapis.com/consumerQuotaMetrics/generativelanguage.googleapis.com%2Fgenerate_requests_per_model_per_day" `
+  -Headers @{Authorization="Bearer $token"} |
+  Select-Object -ExpandProperty consumerQuotaLimits |
+  ForEach-Object { $_.quotaBuckets } |
+  Where-Object consumerOverride |
+  Select-Object @{n='dims';e={$_.dimensions}}, @{n='override';e={$_.consumerOverride.overrideValue}}
+```
+
+### 캡 조정
+
+```powershell
+# 일일 캡 변경 (예: 500 → 1000)
+$token = gcloud auth print-access-token
+Invoke-RestMethod `
+  -Uri "https://serviceusage.googleapis.com/v1beta1/projects/452237528328/services/generativelanguage.googleapis.com/consumerQuotaMetrics/generativelanguage.googleapis.com%2Fgenerate_requests_per_model_per_day/limits/%2Fd%2Fmodel%2Fproject/consumerOverrides?force=true" `
+  -Method POST -Headers @{Authorization="Bearer $token";"Content-Type"="application/json"} `
+  -Body '{"overrideValue":"1000","dimensions":{}}'
+```
+
+또는 [Cloud Console Quotas](https://console.cloud.google.com/iam-admin/quotas?project=gen-lang-client-0081580267)에서 GUI로 조정.
+
+### Referrer 추가 (예: 커스텀 도메인 연결 후)
+
+```powershell
+gcloud services api-keys update 469659c4-c4be-4318-bad5-799e5c1074a6 `
+  --project=gen-lang-client-0081580267 `
+  --allowed-referrers="https://manga-pat.vercel.app/*,https://*.vercel.app/*,https://your-domain.com/*" `
+  --api-target=service=generativelanguage.googleapis.com
+```
+
+### 키 노출/유출 시 즉시 조치
+
+1. **새 키 발급**: [Cloud Credentials](https://console.cloud.google.com/apis/credentials?project=gen-lang-client-0081580267)에서 Create credentials → API key → 동일 제한 적용
+2. **Vercel 환경변수 갱신**: Vercel Dashboard → Settings → Environment Variables → `GEMINI_API_KEY` 값 교체
+3. **재배포**: `npx vercel --prod` (cloud build 시 새 키 인라인)
+4. **옛 키 삭제**: 새 키 동작 확인 후 옛 키 삭제
+
+### 비용 모니터링
+
+- [Cloud Billing Reports](https://console.cloud.google.com/billing) — 일일/월별 사용량
+- [Generative Language API 메트릭](https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/metrics?project=gen-lang-client-0081580267) — 실시간 호출 수
+- 일일 캡에 가까워지면 위 페이지에서 그래프 확인 후 캡 상향 또는 사용 패턴 점검

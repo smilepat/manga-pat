@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { ComicFace, TOTAL_PAGES } from './types';
 import { Panel } from './Panel';
 
@@ -60,6 +60,25 @@ export const Book: React.FC<BookProps> = (props) => {
     const goPrev = useCallback(() => {
         if (props.currentSheetIndex > 0) props.onSheetClick(props.currentSheetIndex - 1);
     }, [props.currentSheetIndex, props.onSheetClick]);
+
+    // Download menu state — floating button accessible from any page
+    const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+    const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!showDownloadMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target as Node)) {
+                setShowDownloadMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showDownloadMenu]);
+
+    const readyPagesCount = props.comicFaces.filter(f => f.imageUrl && !f.isLoading).length;
+    const loadingCount = props.comicFaces.filter(f => f.isLoading).length;
+    const canDownload = readyPagesCount > 0;
 
     const sheetsToRender = [];
     if (props.comicFaces.length > 0) {
@@ -131,6 +150,70 @@ export const Book: React.FC<BookProps> = (props) => {
               >
                 →
               </button>
+            </div>
+          )}
+
+          {/* Floating download button (top-left) — accessible from any page */}
+          {props.isStarted && !props.isSetupVisible && (
+            <div ref={downloadMenuRef} className="fixed top-4 left-4 z-50">
+              <button
+                onClick={(e) => { e.stopPropagation(); if (canDownload) setShowDownloadMenu(v => !v); }}
+                disabled={!canDownload}
+                className={`bg-black/80 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all ${
+                  canDownload ? 'hover:bg-black/90 active:scale-95' : 'opacity-50 cursor-not-allowed'
+                }`}
+                aria-label="다운로드 메뉴"
+                title={canDownload ? `${readyPagesCount}페이지 다운로드 가능` : '아직 생성된 페이지가 없습니다'}
+              >
+                <span className="text-base">📥</span>
+                <span>저장</span>
+                {loadingCount > 0 && (
+                  <span className="text-[10px] text-blue-300">({readyPagesCount}/{readyPagesCount + loadingCount})</span>
+                )}
+                <span className={`text-[10px] transition-transform ${showDownloadMenu ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+
+              {showDownloadMenu && canDownload && (
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden min-w-[240px] animate-[fadeIn_0.15s_ease-out]">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowDownloadMenu(false); props.onDownload(true); }}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-gray-100 transition-colors"
+                  >
+                    <span className="text-xl">📥</span>
+                    <div className="flex-1">
+                      <div className="font-bold text-sm text-gray-900">PDF 다운로드</div>
+                      <div className="text-[10px] text-gray-500">워터마크 포함</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowDownloadMenu(false); props.onDownload(false); }}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-gray-100 transition-colors"
+                  >
+                    <span className="text-xl">📄</span>
+                    <div className="flex-1">
+                      <div className="font-bold text-sm text-gray-900">PDF 다운로드</div>
+                      <div className="text-[10px] text-gray-500">워터마크 없이</div>
+                    </div>
+                  </button>
+                  {props.onDownloadImages && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowDownloadMenu(false); props.onDownloadImages!(); }}
+                      className="w-full px-4 py-3 text-left hover:bg-purple-50 flex items-center gap-3 transition-colors"
+                    >
+                      <span className="text-xl">🖼️</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-sm text-gray-900">이미지 개별 저장</div>
+                        <div className="text-[10px] text-gray-500">페이지별 WebP 파일</div>
+                      </div>
+                    </button>
+                  )}
+                  {loadingCount > 0 && (
+                    <div className="px-4 py-2 bg-amber-50 border-t border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+                      ⏳ {loadingCount}페이지 생성 중. 지금 저장하면 완성된 {readyPagesCount}페이지만 포함됩니다.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
